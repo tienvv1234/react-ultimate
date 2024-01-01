@@ -1,0 +1,44 @@
+:root {
+  --color-lightest: #fff4e6;
+  --color-light: #ffe8d9;
+  --color-medium: #ffa94d;
+  --color-dark: #ff922b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 62.5%;
+  font-family: -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen-Sans,
+    Ubuntu,
+    Cantarell,
+    "Helvetica Neue",
+    sans-serif;
+}
+body {
+  height: 100vh;
+  color: #495957;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.sidebar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+ul, li {
+  list-style: none;
+}
