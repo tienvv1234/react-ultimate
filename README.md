@@ -123,3 +123,78 @@ long renders won't block the main thread or js engine
 
 - When a key changes between renders, the element will be destroyed and a new one will be created (event if the position in the tree is the same as before)
 2 Using keys to reset state
+
+### The two types of logic in react components
+1. Render logic
+- Code that lives at the top level of the component function
+- Participates in describing how the components view looks like
+- Executed evert time the component renders
+
+2. Event Handler Functions
+- Executed as a consequence of the event that the handler is listening for (change event in this example)
+- Code that actually does things: update state perform an http request, read an input field, navigate to another page, etc
+
+### Refresher: functional programming principles
+
+- Side effect: dependency on or modification of any data outside the function scope. "interaction with the outside world". Examples: mutating external variables, http requests, DOM queries, writing to the DOM, etc
+
+- Pure function: function that does not have any side effects. It only depends on the input arguments and returns a value or another function. Examples: Math.max(), Math.min(), Math.sqrt(), etc
+    + Does not changes any variables outside its scope
+    + Given the same input, a pure function always returns the same output
+    ![Alt text](<pure and impure function.png>)
+
+- Side effects are not bad! A program can only be useful if it has some interaction with the outside world
+
+### Rules for render logic
+- Components must be pure when it comes to render logic: given the same props(input), a component instance should always return the same JSX(output)
+
+Render logic must produce no side effects: no interaction with the outside world is allowed, so in render logic
+
+    - Do not perform network requests (API calls)
+    - Do not start timers
+    - Do not directly use the DOM api
+    - Do not mutate onjects or variables outside the function scope
+    - Do not update state (or refs): this will create infinite loop
+
+Side effects are allowed (and encouraged) in event handler functions
+There is also a spcial hook to register side effects (useEffect)
+
+### how state updates are batched
+- Renders are not triggered immediately, but scheduled for when the JS engine has some free time. There is also batching of multiple setState calls in event handlers
+![Alt text](image.png)
+
+### DOM refresher: event propagation and delegation
+
+
+### Practical Summary
+- A component is like a blueprint for a piece of UI that will eventually exist on the screen. When we "use" a component, React creates a component instance, which is like an actual physical manifestation of a component, containning props state, and more. A component instance, when rendered, wil return a React element
+
+- "Rendering" only means calling component functions and calculating what DOM elements need to be inserted, deleted, or updated. is has nothing to do with writing to the dom. Therefore, each time a component instance is rendered and re-rendered, the function is called again
+
+- only the initial app render and state updates can cause a render, which happens for the entire application, not just one single component
+
+- When a component instance gets re-rendered, all its children will get re-rendered as well. this doesn't mean that all children will get updated in the DOM, Thanks to reconciliation, which checks which elements have actually changed between two renders, but all this re-rendering can still have an impact on performance( more on that later the course)
+
+- Diffing is how react decides which DOM elements need to be added or modified. if, between renders, a certain react element stays at the same position in the element tree, the corresponding DOM  element and component state will stay the same. if the element changed to a different position, or if it;s a different element type, the DOM element and state will be destroyed
+
+- Giving elements a key prop allows react to distinguish between mmultiple component instances. when a key stays the same across renders, the element is kept in the DOM, this is why we need to use keys in lists. when we change the key between renders, the dom element will be destroyed and rebuilt, we use this as a trick to reset state
+
+- Never declare a new component inside another component! Doing so will re-create the nested component every time the parent component re-renders. react will always see the nested component as new, and therefore reset its state each time the parent state is updated. Instead, always declare components at the top level of the file, and then use them inside other components
+
+- The login that produces JSX output for a component instance (render logic) is not allowed to produce and side effects: no api calls, no timers, no object or variable mutations, no state updates. Side effects are allowed is inside event handlers and inside useEffect
+
+- The DOM is updated in the commit phase, but not by react, but by a "renderer" called ReactDOM. that's why we always need to include both libreries in a react web app project. we can use other renderers to use react on different platforms, for example to build mobile or native apps
+
+- Multiple state updates inside an event handler function are batched, so they happen all at once, causing only one re-render, this means we can not access a state vatiable immediately after updating it: state updtes are asynchronous, Since react 18, batching also happens in timeouts, promises and native event handlers
+
+- When using events in event handlers, we get access to a synthetic event object, not the browser's native object, so that events work the same way across all browsers. The difference is that most systhetic events bubble, including focus, blur, and change, which do not bubble as native browser events, only the scrool event does not bubble
+
+- React is a library, not a framework. Thjis means that you can assemble your application using your favorite third-party libraries. the downside is that you need to find and lear all these additional libraries. no problem as you will learn about the most important use libraries in this course
+
+### Summary useState!
+[Alt text](<summary useState.png>)
+- make sure to not mutate objects or arrays, but to replace them with new ones
+
+### useRef
+![Alt text](useRefs.png)
+![Alt text](<state vs refs.png>)

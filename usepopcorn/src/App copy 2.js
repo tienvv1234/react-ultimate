@@ -1,8 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import StarRating from "./StarRating";
-import { useMovie } from "./useMovie";
-import { useLocalStorageState } from "./useLocalStorageState";
-import { useKey } from "./useKey";
 const tempMovieData = [
   {
     imdbID: "tt1375666",
@@ -54,45 +51,102 @@ const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
 export default function App() {
+  const [movies, setMovies] = useState(tempMovieData);
   // const [watched, setWatched] = useState([]);
   const [search, setSearch] = useState("");
-  const {movies, isLoading, error} = useMovie(search);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState(null);
-  const [watched, setWatched] = useLocalStorageState([], "watched");
-  // const [watched, setWatched] = useState(() => {
-  //   // this is pure function if you pass a argument it won't work
-  //   // this function will be called only once in the initial render
-  //   const data = localStorage.getItem("watched");
-  //   return data ? JSON.parse(data) : [];
-  // }); 
+  const [watched, setWatched] = useState(() => {
+    // this is pure function if you pass a argument it won't work
+    // because pure fuction cannot recieve arguments
+    // this function will be called only once in the initial render
+    const data = localStorage.getItem("watched");
+    return data ? JSON.parse(data) : [];
+  }); 
 
   console.log("rendering...");
+  useEffect(() => {
+    console.log("fetching movies111...");
+    const controller = new AbortController();
+    const fetchMovies = async () => {
+      try {
+        setError('');
+        setIsLoading(true);
+        const response = await fetch(
+          `https://www.omdbapi.com/?apikey=2f6435d9&s=${search}`,
+          { signal: controller.signal }
+        );
 
+        if (!response.ok) {
+          throw new Error(
+            `Something went wrong, server responded with ${response.status}`
+          );
+        }
 
-  // useEffect(() => {
-  //   function callback (e) {
-  //     if (e.key === "Escape") {
-  //       handleCloseMovie();
-  //     }
-  //   }
+        const data = await response.json();
+        if (data.Response === "False") {
+          throw new Error(data.Error);
+        }
+        setMovies(data?.Search);
+        setError('');
+      } catch (error) {
+        console.error(error);
 
-  //   document.addEventListener("keydown", callback);
+        if (error.name === "AbortError") {
+          console.log("fetch aborted");
+          return;
+        }
+        setError(error.message);
+      }
+      finally {
+        setIsLoading(false);
+      }
+    }
+
+    if(!search && search.length < 3) {
+      setMovies([]);
+      setError('');
+      return;
+    }
+    handleCloseMovie();
+    fetchMovies();
+
+    return () => {
+      console.log("cleanup");
+      controller.abort();
+    };
+  }, [search])
+
+  useEffect(() => {
+    function callback (e) {
+      if (e.key === "Escape") {
+        handleCloseMovie();
+      }
+    }
+
+    document.addEventListener("keydown", callback);
     
-  //   return () => {
-  //     document.removeEventListener("keydown", callback);
-  //   }
-  // }, []);
+    return () => {
+      document.removeEventListener("keydown", callback);
+    }
+  }, []);
+
+  useEffect(() => {
+    const data = localStorage.getItem("watched");
+
+  }, [watched])
 
   function handleDeleteWatched(id) {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
-  function handleCloseMovie() {
-    setSelectedId(null);
-  }
-
   function handleSelectMovie(id) {
     setSelectedId((selectedId) => (id === selectedId ? null : id));
+  }
+
+  function handleCloseMovie() {
+    setSelectedId(null);
   }
 
   function handleAddWatch(movie) {
@@ -167,30 +221,7 @@ function Logo () {
 }
 
 function Search ({ search, setSearch }) {
-  const inputEl = useRef(null);
 
-  useKey("Enter", () => {
-    if (document.activeElement === inputEl.current) return;
-    inputEl.current.focus();
-    setSearch("");
-  })
-
-  // useEffect(() => {
-  //   function callback(e) {
-  //     if (document.activeElement === inputEl.current) return;
-      
-  //     if (e.key === "Enter") {
-  //       inputEl.current.focus();
-  //       setSearch("");
-  //     }
-  //   }
-
-  //   document.addEventListener("keydown", callback);
-
-  //   return () => {
-  //     document.removeEventListener("keydown", callback);
-  //   };
-  // }, []);
   return (
       <input
         className="search"
@@ -198,7 +229,6 @@ function Search ({ search, setSearch }) {
         placeholder="Search movies..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        ref={inputEl}
       />
   );
 }
@@ -284,7 +314,6 @@ function SelectedMovie({watched, selectedId, onCloseMovie, onAddWatched}) {
   // const isWatched = watched.some((movie) => movie.imdbID === selectedId);
   const isWatched = watched.map((movie) => movie.imdbID).includes(selectedId);
   const watchedUserRating = watched.find((movie) => movie.imdbID === selectedId)?.userRating;
-  const countRef = useRef(0);
   const {
     Title: title,
     Year: year,
@@ -312,8 +341,6 @@ function SelectedMovie({watched, selectedId, onCloseMovie, onAddWatched}) {
     getMoviewDetails();
   }, [selectedId])
 
-  useKey("Escape", onCloseMovie);
-
   useEffect(() => {
     if (!title) return;
     document.title = `Movie | ${title || "usePopcorn"}`
@@ -323,9 +350,6 @@ function SelectedMovie({watched, selectedId, onCloseMovie, onAddWatched}) {
     }
   }, [title])
 
-  useEffect(() => {
-    countRef.current = countRef.current + 1;
-  }, [userRating]);
   function handleAddWatched(movie) {
     const newWatchedMovie = {
       imdbID: selectedId,
@@ -335,7 +359,6 @@ function SelectedMovie({watched, selectedId, onCloseMovie, onAddWatched}) {
       imdbRating: Number(imdbRating),
       runtime: Number(runtime.split("").at(0)),
       userRating,
-      countRatingDecisions: countRef.current, 
     }
     onAddWatched(newWatchedMovie);
     onCloseMovie();
